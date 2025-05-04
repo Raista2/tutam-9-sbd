@@ -1,8 +1,16 @@
 import { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 import CommandSeal from '../../CommandSeal.webp';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
 
 const ServantCard = memo(({ servant }) => {
     return (
@@ -44,26 +52,33 @@ const Gacha = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // Debug API URL
+                console.log('API base URL:', API_BASE_URL);
+                
                 // Fetch pools
-                const poolsResponse = await fetch(`${API_BASE_URL}/pools`);
-                if (!poolsResponse.ok) {
-                    throw new Error('Failed to fetch pools');
-                }
-                const poolsData = await poolsResponse.json();
-                setPools(poolsData);
+                const poolsResponse = await api.get('/pools');
+                setPools(poolsResponse.data);
 
                 // Fetch user's servants if user is logged in
                 if (user && user.id) {
-                    const servantsResponse = await fetch(`${API_BASE_URL}/users/${user.id}/servants`);
-                    if (!servantsResponse.ok) {
-                        throw new Error('Failed to fetch servants');
-                    }
-                    const servantsData = await servantsResponse.json();
-                    setUserServants(servantsData);
+                    const servantsResponse = await api.get(`/users/${user.id}/servants`);
+                    setUserServants(servantsResponse.data);
                 }
             } catch (err) {
                 console.error('Error fetching data:', err);
-                setError('Failed to load data. Please refresh the page.');
+                setError(`Failed to load data: ${err.message || 'Unknown error'}`);
+                
+                // More detailed logging
+                if (err.response) {
+                    // The request was made and the server responded with an error status
+                    console.error('Response error:', err.response.status, err.response.data);
+                } else if (err.request) {
+                    // The request was made but no response was received
+                    console.error('Request error - no response received:', err.request);
+                } else {
+                    // Something happened in setting up the request
+                    console.error('Request setup error:', err.message);
+                }
             } finally {
                 setLoading(false);
             }
@@ -80,39 +95,23 @@ const Gacha = () => {
     const handlePull = async () => {
         if (!selectedPool || !user || pulling) return;
 
-        // Start the process
         setPulling(true);
         setShowAnimation(true);
         setError('');
-
-        // Clear previous result first to avoid any lingering state
         setPullResult(null);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/gacha/pull`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    poolId: selectedPool._id
-                }),
+            const response = await api.post('/gacha/pull', {
+                userId: user.id,
+                poolId: selectedPool._id
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to pull');
-            }
-
-            const data = await response.json();
 
             // Show animation for set time
             await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Hide animation first
             setShowAnimation(false);
-
-            // Wait a small amount for animation to hide
             await new Promise(resolve => setTimeout(resolve, 200));
+
+            const data = response.data;
 
             if (data.success && data.character) {
                 // Calculate new currency
@@ -126,49 +125,53 @@ const Gacha = () => {
                     character: data.character
                 };
 
-                // Update all states at once - React 18 automatically batches these
                 updateUserData({ ...user, currency: newCurrency });
                 setPullResult(data);
                 setUserServants(prev => [...prev, newServant]);
             } else {
                 setPullResult(data);
             }
-
-            // Finally, mark the process as complete
-            setPulling(false);
         } catch (err) {
             console.error('Error during pull:', err);
-            setError(err.message || 'Failed to pull. Please try again.');
+            
+            // Better error handling with axios
+            if (err.response) {
+                setError(`Pull failed: ${err.response.data.message || err.response.statusText}`);
+            } else if (err.request) {
+                setError('Network error: Could not connect to the server');
+            } else {
+                setError(`Error: ${err.message}`);
+            }
+            
             setShowAnimation(false);
+        } finally {
             setPulling(false);
         }
     };
 
     const handleDeleteAccount = async () => {
-        // Show confirmation dialog
         if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
             return;
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/users/${user.id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to delete account');
-            }
-
+            await api.delete(`/users/${user.id}`);
+            
             // Clear auth context/logout
             updateUserData(null);
-
+            
             // Redirect to login page
             window.location.href = '/login';
         } catch (err) {
             console.error('Error deleting account:', err);
-            setError('Failed to delete account: ' + err.message);
+            
+            if (err.response) {
+                setError(`Account deletion failed: ${err.response.data.message || err.response.statusText}`);
+            } else if (err.request) {
+                setError('Network error: Could not connect to the server');
+            } else {
+                setError(`Error: ${err.message}`);
+            }
         }
     };
 
