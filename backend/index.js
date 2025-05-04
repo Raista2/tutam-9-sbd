@@ -11,7 +11,7 @@ let corsOptions = {
     origin: '*', // Lebih permisif untuk development
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: false
+    credentials: true
 }
 
 app.use(cors(corsOptions));
@@ -30,7 +30,8 @@ app.get('/api/pools', gachaController.getAllPools);
 app.get('/api/pools/:poolId', gachaController.getPoolDetails);
 app.post('/api/gacha/pull', gachaController.pullGacha);
 app.get('/api/users/:userId/servants', gachaController.getUserServants);
-app.post('/api/auth/login', gachaController.loginUser); app.post('/api/auth/register', gachaController.registerUser);
+app.post('/api/auth/login', gachaController.loginUser); 
+app.post('/api/auth/register', gachaController.registerUser);
 app.delete('/api/users/:userId', gachaController.deleteUser);
 
 if (require.main === module) {
