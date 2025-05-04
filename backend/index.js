@@ -1,17 +1,22 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config(); 
+require('dotenv').config();
 const gachaController = require('./controllers/GachaController');
 
 const app = express();
-const PORT = process.env.PORT || 3000; 
+const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-mongoose.connect( process.env.MONGODB_URI );
+mongoose.connect(process.env.MONGODB_URI);
 
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error: '));
