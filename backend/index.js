@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: 'https://tutam-9-sbd.vercel.app' || '*',
+    origin: 'https://tutam-9-sbd.vercel.app/api' || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
