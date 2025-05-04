@@ -7,14 +7,13 @@ const gachaController = require('./controllers/GachaController');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['X-Requested-With', 'Content-Type', 'Authorization'],
-    optionsSuccessStatus: 204
-}));
+let corsOptions = {
+    origin: process.env.FRONTEND_URL || '*', // Lebih permisif untuk development
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}
 
-
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
