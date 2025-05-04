@@ -11,7 +11,7 @@ let corsOptions = {
     origin: process.env.FRONTEND_URL || '*', // Lebih permisif untuk development
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    credentials: false
 }
 
 app.use(cors(corsOptions));
@@ -26,6 +26,19 @@ db.once('open', function () {
     console.log('Connected to MongoDB Gacha');
 });
 
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.sendStatus(200);
+});
+
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log('Headers:', req.headers);
+    next();
+});
+
 app.get('/api/pools', gachaController.getAllPools);
 app.get('/api/pools/:poolId', gachaController.getPoolDetails);
 app.post('/api/gacha/pull', gachaController.pullGacha);
@@ -33,6 +46,10 @@ app.get('/api/users/:userId/servants', gachaController.getUserServants);
 app.post('/api/auth/login', gachaController.loginUser); 
 app.post('/api/auth/register', gachaController.registerUser);
 app.delete('/api/users/:userId', gachaController.deleteUser);
+
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
 
 if (require.main === module) {
     app.listen(PORT, () => console.log(`🚀 Server started at port:${PORT}`));
